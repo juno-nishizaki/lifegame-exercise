@@ -1,0 +1,7 @@
+com.hs2n.exercise.lifegame
+com.hs2n.exercise.lifegame.model
+com.hs2n.exercise.lifegame.model.core
+com.hs2n.exercise.lifegame.util
+com.hs2n.exercise.lifegame.view
+com.hs2n.exercise.lifegame.view.component
+com.hs2n.exercise.lifegame.view.launcher
