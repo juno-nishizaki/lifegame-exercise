@@ -10,6 +10,7 @@ import com.hs2n.exercise.lifegame.model.core.AbstractLifeGameField;
 import com.hs2n.exercise.lifegame.model.core.ICell;
 import com.hs2n.exercise.lifegame.model.core.ILifeGameField;
 import com.hs2n.exercise.lifegame.model.core.Position;
+import com.hs2n.exercise.lifegame.util.EventNotifier;
 
 /**
  * ライフゲームのモデルとなるクラスです。
@@ -57,23 +58,39 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
     private Predicate<Integer> generationRange = (v -> v >= 0 && v < getCalculatedGenerationSize());
 
     /**
-     * 平面変化のイベントハンドラーを保持するリストです。
+     * 平面全体の状態が変化したときに使用するイベント通知オブジェクトです。
      */
-    private List<BiConsumer<LifeGame<L, F>, FieldChangeEventArgs>> fieldChangedEventHandlerList = new ArrayList<>();
+    private EventNotifier<LifeGame<L, F>, FieldChangeEventParams> fieldChangeEventNotifier = new EventNotifier<>(this,
+        true);
 
-    public static class FieldChangeEventArgs {
-        private FieldChangeEventArgs() {}
+    /**
+     * 平面全体の状態が変化したときにイベント通知先に渡すパラメーターのクラスです。
+     * 現状では渡すパラメーターがないですが、セルの状態変化と形を合わせるために用意しています。
+     *
+     * @author Juno NISHIZAKI
+     *
+     */
+    public static class FieldChangeEventParams {
+        private FieldChangeEventParams() {}
     }
 
     /**
-     * セル変化のイベントハンドラーを保持するリストです。
+     * セルの状態が変化したときに使用するイベント通知オブジェクトです。
      */
-    private List<BiConsumer<LifeGame<L, F>, CellChangeEventArgs>> cellChangedEventHandlerList = new ArrayList<>();
+    private EventNotifier<LifeGame<L, F>, CellChangeEventParams> cellChangeEventNotifier = new EventNotifier<>(this,
+        true);
 
-    public static class CellChangeEventArgs {
+    /**
+     * セルの状態が変化したときにイベント通知先に渡すパラメーターのクラスです。
+     * どの位置のセルが変化したかを表すために使用します。
+     *
+     * @author Juno NISHIZAKI
+     *
+     */
+    public static class CellChangeEventParams {
         private Position position;
 
-        private CellChangeEventArgs(Position position) {
+        private CellChangeEventParams(Position position) {
             this.position = position;
         }
 
@@ -100,7 +117,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         initializeHistory();
 
         // リセットにより全体の状態が変化するため、平面変化のイベントを発生させる
-        fireFieldChanged(new FieldChangeEventArgs());
+        fieldChangeEventNotifier.fire(new FieldChangeEventParams());
     }
 
     /**
@@ -134,7 +151,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         latestLifeGameField.generateLife(birthRate, random);
 
         // 全体の状態が変化するため、平面変化のイベントを発生させる
-        fireFieldChanged(new FieldChangeEventArgs());
+        fieldChangeEventNotifier.fire(new FieldChangeEventParams());
     }
 
     /**
@@ -156,7 +173,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         }
 
         // セル変化のイベントを発生させる
-        fireCellChanged(new CellChangeEventArgs(position));
+        cellChangeEventNotifier.fire(new CellChangeEventParams(position));
     }
 
     public void rotateCellStateAt(Position position) {
@@ -166,7 +183,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         latestLifeGameField.rotateCellState(latestLifeGameField.getCellAt(position));
 
         // セル変化のイベントを発生させる
-        fireCellChanged(new CellChangeEventArgs(position));
+        cellChangeEventNotifier.fire(new CellChangeEventParams(position));
     }
 
     public void next() {
@@ -178,7 +195,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         generationIndex++;
 
         // 全体の状態が変化するため、平面変化のイベントを発生させる
-        fireFieldChanged(new FieldChangeEventArgs());
+        fieldChangeEventNotifier.fire(new FieldChangeEventParams());
     }
 
     public void previous() {
@@ -189,7 +206,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         generationIndex--;
 
         // 全体の状態が変化するため、平面変化のイベントを発生させる
-        fireFieldChanged(new FieldChangeEventArgs());
+        fieldChangeEventNotifier.fire(new FieldChangeEventParams());
     }
 
     public void setGenerationIndex(int generationIndex) {
@@ -197,7 +214,7 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
             throw new IndexOutOfBoundsException();
         }
         this.generationIndex = generationIndex;
-        fireFieldChanged(new FieldChangeEventArgs());
+        fieldChangeEventNotifier.fire(new FieldChangeEventParams());
     }
 
     public int getGenerationIndex() {
@@ -245,30 +262,12 @@ public class LifeGame<L, F extends AbstractLifeGameField<L>> {
         }
     }
 
-    public void addFieldChangedEventHandler(BiConsumer<LifeGame<L, F>, FieldChangeEventArgs> listener) {
-        fieldChangedEventHandlerList.add(listener);
+    public void addFieldChangedEventHandler(BiConsumer<LifeGame<L, F>, FieldChangeEventParams> eventHandler) {
+        fieldChangeEventNotifier.addEventHandler(eventHandler);
     }
 
-    public void removeFieldChangedEventHandler(BiConsumer<LifeGame<L, F>, FieldChangeEventArgs> listener) {
-        fieldChangedEventHandlerList.remove(listener);
-    }
-
-    public void addCellChangedEventHandler(BiConsumer<LifeGame<L, F>, CellChangeEventArgs> listener) {
-        cellChangedEventHandlerList.add(listener);
-    }
-
-    public void removeCellChangedEventHandler(BiConsumer<LifeGame<L, F>, CellChangeEventArgs> listener) {
-        cellChangedEventHandlerList.remove(listener);
-    }
-
-    private void fireFieldChanged(FieldChangeEventArgs eventArgs) {
-        fieldChangedEventHandlerList.stream()
-            .forEach(listener -> listener.accept(this, eventArgs));
-    }
-
-    private void fireCellChanged(CellChangeEventArgs eventArgs) {
-        cellChangedEventHandlerList.stream()
-            .forEach(listener -> listener.accept(this, eventArgs));
+    public void addCellChangedEventHandler(BiConsumer<LifeGame<L, F>, CellChangeEventParams> eventHandler) {
+        cellChangeEventNotifier.addEventHandler(eventHandler);
     }
 
 }

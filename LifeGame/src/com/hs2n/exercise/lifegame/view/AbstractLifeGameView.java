@@ -21,6 +21,14 @@ import com.hs2n.exercise.lifegame.model.core.AbstractLifeGameField;
 import com.hs2n.exercise.lifegame.model.core.Position;
 import com.hs2n.exercise.lifegame.view.component.AbstractCellComponent;
 
+/**
+ * ライフゲームの画面を生成する共通の抽象クラスです。
+ *
+ * @author Juno NISHIZAKI
+ *
+ * @param <L> 生命体の型
+ * @param <F> 二次元平面の型
+ */
 public abstract class AbstractLifeGameView<L, F extends AbstractLifeGameField<L>> {
 
     private static final int DEFAULT_CELL_SIZE = 12;
@@ -47,24 +55,28 @@ public abstract class AbstractLifeGameView<L, F extends AbstractLifeGameField<L>
     private JLabel calculatedGenerationLabel;
 
     private void createAndShow() {
-
+        // 二次元平面のパネルを生成する
         createFieldPanel();
-
+        // コントロールパネルを生成する
         createControlPanel();
 
+        // モデルから通知されるイベントを受け取るためイベントハンドラーを登録する
         lifeGame.addFieldChangedEventHandler(this::fieldChangedEventHandlerFunc);
         lifeGame.addCellChangedEventHandler(this::cellChangedEventHandlerFunc);
 
+        // 外枠となるフレームを生成する
         final var frame = new JFrame("ライフゲーム：" + getName());
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setLocation(20, 20);
         frame.setResizable(false);
 
+        // フレームにパネルを追加する
         final var contentPane = frame.getContentPane();
         contentPane.setLayout(new FlowLayout());
         contentPane.add(fieldPanel);
         contentPane.add(controlPanel);
 
+        // フレームのサイズを調整して表示する
         frame.pack();
         frame.setVisible(true);
         isLaunched = true;
@@ -155,31 +167,45 @@ public abstract class AbstractLifeGameView<L, F extends AbstractLifeGameField<L>
         return String.format("計算済みの世代数： %4d", lifeGame.getCalculatedGenerationSize());
     }
 
-    private void fieldChangedEventHandlerFunc(LifeGame<L, F> sender, LifeGame.FieldChangeEventArgs eventArgs) {
+    /**
+     * 平面全体が変化したときのイベントハンドラー
+     *
+     * @param sender イベント通知元となるライフゲームのモデル
+     * @param eventParams イベント通知時に渡されるパラメーター
+     */
+    private void fieldChangedEventHandlerFunc(LifeGame<L, F> sender, LifeGame.FieldChangeEventParams eventParams) {
+        // ボタンの有効／無効を制御する
+        generateLifeButton.setEnabled(sender.isInitialState());
+        if (!autoNextButton.isSelected()) {
+            previousButton.setEnabled(!sender.isFirstGeneration());
+        }
 
-        SwingUtilities.invokeLater(() -> {
-            generateLifeButton.setEnabled(sender.isInitialState());
-            if (!autoNextButton.isSelected()) {
-                previousButton.setEnabled(!sender.isFirstGeneration());
-            }
+        // ラベルを更新する
+        currentGenerationLabel.setText(createCurrentGenerationText());
+        calculatedGenerationLabel.setText(createCalculatedGenerationText());
 
-            currentGenerationLabel.setText(createCurrentGenerationText());
-            calculatedGenerationLabel.setText(createCalculatedGenerationText());
+        // 全セルのツールチップを更新する
+        cellComponents.entrySet().stream()
+            .forEach(entry -> entry.getValue().updateToolTipText());
 
-            cellComponents.entrySet().stream()
-                .forEach(entry -> entry.getValue().updateToolTipText());
-
-            fieldPanel.repaint();
-        });
+        // 二次元平面のパネル全体を再描画する
+        fieldPanel.repaint();
     }
 
-    private void cellChangedEventHandlerFunc(LifeGame<L, F> sender, LifeGame.CellChangeEventArgs eventArgs) {
-        var cellComponent = cellComponents.get(eventArgs.getPosition());
+    /**
+     * セルが変化したときのイベントハンドラー
+     *
+     * @param sender イベント通知元となるライフゲームのモデル
+     * @param eventParams イベント通知時に渡されるパラメーター
+     */
+    private void cellChangedEventHandlerFunc(LifeGame<L, F> sender, LifeGame.CellChangeEventParams eventParams) {
+        var cellComponent = cellComponents.get(eventParams.getPosition());
 
-        SwingUtilities.invokeLater(() -> {
-            cellComponent.updateToolTipText();
-            cellComponent.repaint();
-        });
+        // 該当セルのツールチップを更新する
+        cellComponent.updateToolTipText();
+
+        // 該当セルを再描画する
+        cellComponent.repaint();
     }
 
     protected abstract String getName();
