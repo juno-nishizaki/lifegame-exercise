@@ -25,6 +25,10 @@ package view {
         AbstractCellComponent <|-up- TrilemmaCellComponent
         AbstractCellComponent <|-up- WithVitalityCellComponent
 
+        hide DefaultCellComponent methods
+        hide TrilemmaCellComponent methods
+        hide WithVitalityCellComponent methods
+
     }
 
     abstract class AbstractLifeGameView {
@@ -51,6 +55,11 @@ package view {
     DefaultLifeGameView --> DefaultCellComponent : > create
     TrilemmaLifeGameView --> TrilemmaCellComponent : > create
     WithVitalityLifeGameView --> WithVitalityCellComponent : > create
+
+    hide DefaultLifeGameView methods
+    hide TrilemmaLifeGameView methods
+    hide WithVitalityLifeGameView methods
+    
 }
 
 package model {
