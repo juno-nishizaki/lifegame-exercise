@@ -1,0 +1,176 @@
+@startuml LifeGame
+
+package view {
+
+    package component {
+
+        abstract class AbstractCellComponent {
+            # void paintComponent(Graphics g)
+        }
+
+        class DefaultCellComponent {
+            # void paintComponent(Graphics g)
+        }
+
+        class TrilemmaCellComponent {
+            # void paintComponent(Graphics g)
+        }
+
+        class WithVitalityCellComponent {
+            # void paintComponent(Graphics g)
+        }
+
+        JComponent <|-right- AbstractCellComponent
+        AbstractCellComponent <|-up- DefaultCellComponent
+        AbstractCellComponent <|-up- TrilemmaCellComponent
+        AbstractCellComponent <|-up- WithVitalityCellComponent
+
+    }
+
+    abstract class AbstractLifeGameView {
+        # {abstract} AbstractCellComponent createCellComponent(Position position)
+        + void launch()
+    }
+
+    class DefaultLifeGameView {
+        # DefaultCellComponent createCellComponent(Position position)
+    }    
+
+    class TrilemmaLifeGameView {
+        # TrilemmaCellComponent createCellComponent(Position position)
+    }    
+
+    class WithVitalityLifeGameView {
+        # WithVitalityCellComponent createCellComponent(Position position)
+    }    
+
+    AbstractLifeGameView <|-- DefaultLifeGameView
+    AbstractLifeGameView <|-- TrilemmaLifeGameView
+    AbstractLifeGameView <|-- WithVitalityLifeGameView
+
+    DefaultLifeGameView --> DefaultCellComponent : > create
+    TrilemmaLifeGameView --> TrilemmaCellComponent : > create
+    WithVitalityLifeGameView --> WithVitalityCellComponent : > create
+}
+
+package model {
+
+    package core {
+
+        interface ICell<L> {
+            + boolean hasLife()
+            + L getLife()
+            + void putLife(L life)
+            + void removeLife()
+            + ICell copyCell()
+        }
+
+        class Cell<L> {
+            - L life
+            + boolean hasLife()
+            + L getLife()
+            + void putLife(L life)
+            + void removeLife()
+            + ICell copyCell()
+        }
+
+        class NullCell<L> {
+            + void putLife(L life)
+            + ICell copyCell()
+        }
+
+        class Position {
+            - int row
+            - int column
+            + int getRow()
+            + int getColumn()
+        }
+
+        interface ILifeGameField<L> {
+            + ICell getCellAt(Position position)
+            + ILifeGameField update()
+        }
+
+        abstract class AbstractLifeGameField<L> {
+            + ICell getCellAt(Position position)
+            + ILifeGameField update()
+            # {abstract} void updateCell(ICell selfCell, List<ICell> neiborCells)
+        }
+
+        ICell <|.. Cell
+        Cell <|-right- NullCell
+        ILifeGameField <|.. AbstractLifeGameField
+        AbstractLifeGameField *-left- "*" ICell  
+        Position -() Comparable 
+    }
+
+    enum MonoLife {
+        + ONE
+    }
+
+    enum TrilemmaLife {
+        + ROCK
+        + SCISSORS
+        + PAPER
+        + TrilemmaLife getStrongOpponent()
+        + TrilemmaLife getWeakOpponent()
+    }
+
+    class MonoLifeWithVitality {
+        - int vitality
+        + int getVitality()
+        + boolean weaken()
+        + MonoLifeWithVitality clone()
+    }
+
+    class DefaultLifeGameField<MonoLife> {
+        # void updateCell(ICell selfCell, List<ICell> neiborCells)
+    }
+
+    class TrilemmaLifeGameField<TrilemmaLife> {
+        # void updateCell(ICell selfCell, List<ICell> neiborCells)
+    }
+
+    class WithVitalityLifeGameField<MonoLifeWithVitality> {
+        # void updateCell(ICell selfCell, List<ICell> neiborCells)
+    }
+
+    class LifeGame<L, F extends AbstractLifeGameField> {
+        - int generationIndex
+        + void reset()
+        + void next()
+        + void previous()
+    }
+
+    DefaultLifeGameField -right-> MonoLife : > use
+    TrilemmaLifeGameField -up-> TrilemmaLife : > use
+    WithVitalityLifeGameField -up-> MonoLifeWithVitality : > use
+    AbstractLifeGameField <|-down- DefaultLifeGameField
+    AbstractLifeGameField <|-up- TrilemmaLifeGameField
+    AbstractLifeGameField <|-right- WithVitalityLifeGameField
+    LifeGame *-- "1" AbstractLifeGameField
+    LifeGame *-- "*" ILifeGameField
+    MonoLifeWithVitality -() Cloneable 
+}
+
+package util {
+
+    class EventNotifier<S, P> {
+        - S sender
+        + void Fire(P eventParam)
+    }
+
+    class MapCounter<K> {
+        - Map<K, Integer> counts
+        + increment(K key)
+        + getCount(K key)
+    }
+
+}
+
+LifeGame *-up- EventNotifier
+TrilemmaLifeGameField -up-> MapCounter : > use
+AbstractLifeGameView *-- "1" LifeGame
+EventNotifier o-right- AbstractLifeGameView  : < add
+AbstractLifeGameView -left-  EventNotifier : < notify
+@enduml
