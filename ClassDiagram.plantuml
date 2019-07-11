@@ -165,8 +165,10 @@ package model {
 package util {
 
     class EventNotifier<S, P> {
+        - List<BiConsumer<S, P>> eventHandlerList
         - S sender
-        + void Fire(P eventParam)
+        + addEventHandler(BiConsumer<S, P> eventHandler)
+        + void fire(P eventParams)
     }
 
     class MapCounter<K> {
